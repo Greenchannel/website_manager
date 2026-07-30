@@ -8,10 +8,10 @@
 
 ```
 website_manager/
-├── main.cpp           ← 主程序
+├── webm.cpp           ← 主程序
 ├── CLI11.hpp          ← CLI 参数解析库（单头文件）
 ├── spdlog/            ← 日志库（header-only）
-├── main.exe           ← 编译后的可执行文件
+├── webm.exe           ← 编译后的可执行文件
 ├── readme.md          ← 本文件
 ├── listConfig.txt     ← 配置文件，记录当前列表名
 └── list/              ← 存放所有列表数据文件
@@ -23,7 +23,7 @@ website_manager/
 ## 编译
 
 ```bash
-g++ -std=c++23 -I. -o main.exe main.cpp
+g++ -std=c++23 -I. -o webm.exe webm.cpp
 ```
 PowerShell
 ```powershell
