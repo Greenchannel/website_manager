@@ -25,7 +25,7 @@ website_manager/
 ```bash
 g++ -std=c++23 -I. -o main.exe main.cpp
 ```
-
+PowerShell
 ```powershell
 g++ -std=c++23 -I. webm.cpp -o webm.exe
 ```
@@ -75,7 +75,7 @@ main.exe set another
 # 删除列表
 main.exe del mylist
 ```
-
+PowerShell
 ```powershell
 # 初始化目录
 .\webm.exe init
