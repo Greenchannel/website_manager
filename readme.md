@@ -26,6 +26,10 @@ website_manager/
 g++ -std=c++23 -I. -o main.exe main.cpp
 ```
 
+```powershell
+g++ -std=c++23 -I. webm.cpp -o webm.exe
+```
+
 > `-I.` 让编译器在当前目录搜索 spdlog 头文件。首次编译较慢（spdlog 头文件量大），后续增量编译会快得多。
 
 ---
@@ -70,6 +74,26 @@ main.exe set another
 
 # 删除列表
 main.exe del mylist
+```
+
+```powershell
+# 初始化目录
+.\webm.exe init
+# 创建列表
+webm create work
+# 切换列表
+webm set work
+# 添加网址
+webm add B站 https://bilibili.com
+webm add Github https://github.com
+# 查询
+webm find Github
+# 查看全部内容
+webm print
+# 查看所有列表
+webm dir
+# 删除列表
+webm delete test
 ```
 
 ---
