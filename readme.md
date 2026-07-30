@@ -31,6 +31,11 @@ g++ -std=c++23 -I. webm.cpp -o webm.exe
 ```
 
 > `-I.` 让编译器在当前目录搜索 spdlog 头文件。首次编译较慢（spdlog 头文件量大），后续增量编译会快得多。
+---
+
+## webm.ps1
+配套 PowerShell 快捷别名脚本 webm.ps1
+放在 exe 同目录，一键简化调用
 
 ---
 
