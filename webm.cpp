@@ -1,6 +1,6 @@
 /*
 ## AI成分
-- 几乎全部由这个人编写 但是spdlog这种体力活就交给cline处理了
+- 几乎全部由Greenchannel编写,多端适配由qingchuanhub编写 但是spdlog这种体力活就交给cline处理了
 - readme除了"AI成分"和"作者的话"板块 剩下的全是ai生成的
 - Gemini和DeepSeek V4 Flash负责给我答疑
 - DeepSeek V4 Pro 负责审查我的代码
@@ -9,8 +9,10 @@
 ## 作者的话
 - Github的小朋友和大朋友们 早上/中午/晚上好啊
 - 我是一个菜b小萌新 写了个练手小程序 随缘拓展吧 我没啥实战经验 所以代码风格可能有些诡异
+- 但是我不是 -qingchuanhub
 - 我用了spdlog和CLI11这两个库
 - 想使用这个程序特别简单
+- 确实 -qingchuanhub
 - 直接编译代码,丢进一个文件夹里 然后配置一下环境变量
 - 比如编译生成了main.exe
 - 你可以改成任何想要的名字 我个人喜欢的是webm.exe
@@ -24,324 +26,310 @@
 - 写这条readme时 作者很困啊!!! 只睡了5小时就继续爬起来趁着周日休息写代码了!
 - 不好 补课班作业没写
 */
+//为什么不用万能头？-qingchuanhub
 #include <iostream>
-#include <string>
 #include <fstream>
-#include <cerrno>
+#include <string>
+#include <vector>
+#include <algorithm>
 #include <filesystem>
-#include <direct.h>
-#include <windows.h>
-#include <cstdio>
 #include "CLI11.hpp"
 #include "spdlog/spdlog.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
 
-namespace fs=std::filesystem;
-const std::string configFilePath="listConfig.txt";
-//以后杂七杂八的功能可能会用的 所以就先搞函数提升下开发效率
-bool checkFile(const std::string& fileName){//判断文件是否存在
-    std::ifstream file(fileName+".txt");
-        if (file.is_open()){//如果被打开说明文件存在
-            //std::cout<<"Error! The file already exists\n";
-            return true;
-        }
-    return false;
+// 平台区分宏定义
+#ifdef _WIN32
+#include <windows.h>
+#define PATH_SEP "\\"
+#else
+#include <unistd.h>
+#define PATH_SEP "/"
+#endif
+
+namespace fs = std::filesystem;
+const std::string CONFIG_FILE = "listConfig.txt";
+const std::string LIST_FOLDER = "list";
+
+// 开启Windows VT100 彩色终端（PowerShell/WindowsTerminal必备）
+#ifdef _WIN32
+void enableVTColor()
+{
+    HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hStdOut == INVALID_HANDLE_VALUE) return;
+
+    DWORD dwMode = 0;
+    if (!GetConsoleMode(hStdOut, &dwMode)) return;
+
+    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    SetConsoleMode(hStdOut, dwMode);
 }
-bool createFile(const std::string& fileName){//创建文件
-    std::ofstream file(fileName+".txt");
-    if (!file.is_open()){//如果没打开这个文件
-        return false;
-    }
-    return true;
+#else
+void enableVTColor() {}
+#endif
+
+// 拼接list目录下文件完整路径
+std::string getListFilePath(const std::string& fileName)
+{
+    return LIST_FOLDER + PATH_SEP + fileName + ".txt";
 }
-//true表示创建成功 false表示文件名存在或者创建出现问题
-std::string getListName(){
-    std::ifstream file(configFilePath);
-    if (!file.is_open()){//如果无法打开
+
+// 获取当前激活列表名
+std::string getActiveList()
+{
+    if (!fs::exists(CONFIG_FILE))
         return "";
-    }
-    //如果打开了
-    std::string listName;
-    getline(file,listName);
-    return listName;
+
+    std::ifstream cfg(CONFIG_FILE);
+    std::string name;
+    std::getline(cfg, name);
+    cfg.close();
+    return name;
 }
-int main(int argc,char *argv[]){
-    //argc个元素 argv[i]代表参数
-    if (_chdir("list")==-1){//当list不存在或者无法移动到list
-        int errnoCode=errno;
-        spdlog::error("An error occurred when we tried to move to the dictionary named list");
-        spdlog::error("errnoCode: {}", errnoCode);
-        if (_mkdir("list")==-1){//如果创建list失败
-            errnoCode=errno;
-            spdlog::error("We are trying to create the list directory, but we have encountered some problems");
-            spdlog::error("errnoCode: {}", errnoCode);
-            return -1;
-        }else{
-            spdlog::info("Success! We have successfully created the list directory");
-            //_chdir("list");
-            if (_chdir("list")==-1){//创建目录后却仍然无法进入
-                errnoCode=errno;
-                spdlog::error("We successfully created the list directory, but we still can't access it");
-                spdlog::error("errnoCode: {}", errnoCode);
-                return -1;
-            }
-        }
-    }//Google翻译立大功
-    CLI::App app{"A simple website manager"};
-    std::string createListName;
-    auto* create=app.add_subcommand("create","create a new list");
-    create->add_option("name",createListName,"set the create list name")->required();
-    create->callback([&](){
-        if (checkFile(createListName)){
-            spdlog::warn("The file already exists");
-            return;
-        }
-        if (!createFile(createListName)){
-            spdlog::error("Cannot create file");
-            return;
-        }
-        //那么剩下的情况便是正常创建打开的文件
-        spdlog::info("File created successfully");
-    });
-    std::string setListName;
-    auto* set=app.add_subcommand("set","Set the list to search");//设置当前可查询的list
-    set->add_option("name",setListName,"set the list name")->required();
-    set->callback([&](){
-        //首先要判断文件是否存在/能打开
-        if (!checkFile(setListName)){//如果文件无法打开
-            spdlog::warn("Unable to open this list");
-            return;
-        }
-        //setListName是不带有文件后缀的
-        //这个操作通过修改配置文件listConfig.txt实现
-        std::ofstream file(configFilePath);
-        if (!file.is_open()){//如果无法打开配置文件
-            int errnoCode=errno;
-            spdlog::error("Unable to open the config file");
-            spdlog::error("errnoCode: {}", errnoCode);
-            return;
-        }
-        file<<setListName;//直接输入即可(无后缀)
-        spdlog::info("Switched to list '{}'", setListName);
-    });
-    std::string addPairKey;
-    std::string addPairValue;
-    auto* add=app.add_subcommand("add","add a key-value pair");
-    add->add_option("key",addPairKey,"add pair`s key")->required();
-    add->add_option("value",addPairValue,"add pair`s value")->required();
-    add->callback([&](){
-        if (addPairKey==""){
-            spdlog::warn("Key cannot be empty");
-            return;            
-        }
-        if (addPairValue==""){
-            spdlog::warn("Value cannot be empty");
-            return;
-        }
-        if (addPairKey.find(":")!=std::string::npos){//如果键中含有:
-            spdlog::warn("Key cannot contain ':'");
-            return;
-        }
-        std::string listName=getListName();
-        if (listName==""){
-            spdlog::error("No list selected");
-            return;
-        }
-        std::ofstream file(listName+".txt",std::ios::app);//加上ios::app开启追加模式
-        if (!file.is_open()){
-            int errnoCode=errno;
-            spdlog::error("Unable to open the list file");
-            spdlog::error("errnoCode: {}", errnoCode);
-            return;
-        }
-        file<<addPairKey+":"+addPairValue+"\n";
-        spdlog::info("Added: {} -> {}", addPairKey, addPairValue);
-    });
-    //默认输出listConfig.txt
-    //当printListName非空时输出指定的文件
-    auto* print=app.add_subcommand("print","print all websites in list");
-    std::string printListName="";
-    print->add_option("name",printListName,"Display the contents of the file");
-    print->callback([&](){
-        if (printListName!=""){//如果printListName有内容
-            if (!checkFile(printListName)){
-                spdlog::error("Unable to open the file");
-                return;
-            }
-            std::ifstream file(printListName+".txt");
-            if (!file.is_open()){
-                int errnoCode=errno;
-                spdlog::error("Unable to open the list file");
-                spdlog::error("errnoCode: {}", errnoCode);
-                return;
-            }
-            std::string line;
-            int counter=0;
-            while (getline(file,line)){
-                if (line.empty()){
-                    continue;
-                }
-                counter++;
-                std::cout<<counter<<"."<<line<<"\n";
-            }
-        }else{//如果printListName没内容
-            std::string listName=getListName();
-            if (listName==""){//如果获取失败
-                spdlog::error("No list selected");
-                return;
-            }
-            std::ifstream file(listName+".txt");
-            if (!file.is_open()){
-                int errnoCode=errno;
-                spdlog::error("Unable to open the list file");
-                spdlog::error("errnoCode: {}", errnoCode);
-                return;
-            }
-            std::string listLine;
-            int counter=0;
-            while (getline(file,listLine)){
-                if (listLine.empty()){
-                    continue;
-                }
-                counter++;
-                std::cout<<counter<<"."<<listLine<<"\n";
-            }
-        }
-    });
-    auto* find=app.add_subcommand("find","find value by key");
-    std::string findKey;
-    find->add_option("key",findKey,"ask for the key used for find")->required();
-    find->callback([&](){
-        std::string listName=getListName();
-        if (listName==""){//如果获取失败
-            spdlog::error("No list selected");
-            return;
-        }
-        std::ifstream file(listName+".txt");
-        if (!file.is_open()){//如果list打不开
-            int errnoCode=errno;
-            spdlog::error("Unable to open the current list");
-            spdlog::error("errnoCode: {}", errnoCode);
-            return;
-        }
-        std::string listLine;
-        //0~listLine-1
-        while (getline(file,listLine)){
-            //读取到的listLine应该形如xxx=xxx
-            if (listLine.empty()){
-                continue;//如果这行空 直接跳过
-            }
-            std::size_t index=listLine.find(":");
-            if (index==std::string::npos){//表示没有找到
-                continue;
-            }
-            std::string findPairKey=listLine.substr(0,index);//index-1-0+1 实际读取0~index-1
-            std::string findPairValue=listLine.substr(index+1);           
-            //listLine.length()-(index+1)+1=listLine.length()-index-1+1=listLine.length()-index
-            //可以推导出这个式子 可以作为substr的参数 但是完全没必要 substr会自己处理
-            if (findKey==findPairKey){
-                std::cout<<findPairKey+":"<<findPairValue<<"\n";
-            }           
-        }
-    });
-    auto* del=app.add_subcommand("delete","delete list");
-    std::string delListName;
-    del->add_option("name",delListName,"the name of the list");
-    del->callback([&](){
-        if (delListName.empty()){//如果输入值为空
-            spdlog::warn("List name cannot be empty");
-            return;
-        }
-        if (!checkFile(delListName)){//如果文件不存在或无法打开
-            spdlog::warn("The file does not exist or cannot be opened");
-            return;
-        }
-        //remove函数接收一个c风格字符串 所以拼接后要加上.c_str()转换成c风格字符串 且remove函数非零返回值表示错误 所以可以写if (remove(fileName)!=0)
-        if (remove((delListName+".txt").c_str())!=0){
-            spdlog::error("An issue occurred while deleting the list");
-            return;
-        }
-        spdlog::info("The list was successfully deleted");
-        if (delListName==getListName()){
-             std::ofstream file(configFilePath);
-            if (!file.is_open()){
-                spdlog::error("Unable to open listConfig.txt");
-                return;
-            }
-            file<<"";
-            spdlog::warn("listConfig.txt cleared - please use `set` to reconfigure");
-        }
-    });
-    auto* show=app.add_subcommand("show","show the listName from listConfig.txt");
-    show->callback([&](){
-        std::ifstream file(configFilePath);
-        if (!file.is_open()){
-            spdlog::error("Unable to open listConfig.txt");
-            return;
-        }
-        std::string line;
-        getline(file,line);
-        if (line.empty()){
-            spdlog::error("listConfig.txt was not set");
-            return;
-        }
-        std::cout<<line<<"\n";
-    });
-    auto* init=app.add_subcommand("init","init program");
-    init->callback([&](){
-        if (!createFile("listConfig")){//如果创建失败
-            spdlog::error("Unable to create listConfig.txt");
-            return;
-        }
-        spdlog::info("listConfig.txt created successfully");
-    });
-    std::string unionListA;
-    std::string unionListB;
-    auto* unionn=app.add_subcommand("union","Merge list A into list B");
-    unionn->add_option("listA",unionListA,"the name of the list")->required();
-    unionn ->add_option("listB",unionListB,"the name of the list")->required();
-    unionn->callback([&](){
-        if (!checkFile(unionListA)){
-            spdlog::error("List A not found");
-            return;
-        }
-        std::ifstream listA(unionListA+".txt");
-        if (!listA.is_open()){
-            spdlog::error("Unable to open list A");
-            return;
-        }
-        if (!checkFile(unionListB)){
-            spdlog::error("List B not found");
-            return;
-        }
-        std::ofstream listB(unionListB+".txt",std::ios::app);
-        if (!listB.is_open()){
-            spdlog::error("Unable to open list B");
-            return;
-        }
-        listB<<listA.rdbuf();
-        if (listB.fail()){
-            spdlog::error("An error occurred during the writing process");
-        }
-        spdlog::info("Operation completed successfully");
-    });
-    auto* dir=app.add_subcommand("dir","Display all lists in the list directory");
-    dir->callback([&](){
-        int counter=0;
-        fs::path currentPath=fs::current_path();
-        for (const auto& entry : fs::recursive_directory_iterator(currentPath)){
-            if (fs::is_regular_file(entry.status())){
-                counter++;
-                if (entry.path().string()==configFilePath){
-                    continue;
-                }
-                std::cout<<counter<<"."<<entry.path().string()<<"\n";
-            }
-        }
-    });
-    try {
-        app.parse(argc,argv);
-    } catch (const CLI::ParseError &e) {
-        return app.exit(e);
+
+// 设置激活列表
+void setActiveList(const std::string& listName)
+{
+    std::ofstream cfg(CONFIG_FILE, std::ios::trunc);
+    cfg << listName;
+    cfg.close();
+}
+
+// 初始化目录
+void initWorkspace()
+{
+    if (!fs::exists(LIST_FOLDER))
+    {
+        fs::create_directory(LIST_FOLDER);
+        spdlog::info("创建数据目录: {}", LIST_FOLDER);
     }
+    spdlog::info("初始化完成");
+}
+
+// 判断列表是否存在
+bool listExists(const std::string& name)
+{
+    return fs::exists(getListFilePath(name));
+}
+
+// 创建列表
+void createList(const std::string& name)
+{
+    if (listExists(name))
+    {
+        spdlog::warn("列表 {} 已存在", name);
+        return;
+    }
+    std::ofstream f(getListFilePath(name));
+    f.close();
+    spdlog::info("成功创建列表: {}", name);
+}
+
+// 删除列表
+void deleteList(const std::string& name)
+{
+    if (!listExists(name))
+    {
+        spdlog::error("列表 {} 不存在", name);
+        return;
+    }
+    fs::remove(getListFilePath(name));
+    spdlog::info("已删除列表: {}", name);
+
+    // 如果删除的是当前活跃列表，清空配置
+    std::string active = getActiveList();
+    if (active == name)
+    {
+        setActiveList("");
+        spdlog::warn("当前使用列表已被删除，请切换其他列表");
+    }
+}
+
+// 添加键值对
+void addKV(const std::string& key, const std::string& value)
+{
+    std::string active = getActiveList();
+    if (active.empty())
+    {
+        spdlog::error("未选择任何列表，请先使用 set 切换列表");
+        return;
+    }
+    if (key.find(':') != std::string::npos)
+    {
+        spdlog::warn("Key 不能包含冒号 ':'");
+        return;
+    }
+    std::ofstream f(getListFilePath(active), std::ios::app);
+    f << key << ":" << value << "\n";
+    f.close();
+    spdlog::info("添加成功 [{}:{}]", key, value);
+}
+
+// 打印当前列表全部内容
+void printList()
+{
+    std::string active = getActiveList();
+    if (active.empty())
+    {
+        spdlog::error("未选择任何列表");
+        return;
+    }
+    std::ifstream f(getListFilePath(active));
+    if (!f.is_open())
+    {
+        spdlog::error("打开列表文件失败");
+        return;
+    }
+    std::string line;
+    int idx = 1;
+    std::cout << "===== 当前列表[" << active << "] =====\n";
+    while (std::getline(f, line))
+    {
+        if (!line.empty())
+            std::cout << idx++ << ". " << line << "\n";
+    }
+    f.close();
+}
+
+// 精确查找key
+void findKey(const std::string& key)
+{
+    std::string active = getActiveList();
+    if (active.empty())
+    {
+        spdlog::error("未选择任何列表");
+        return;
+    }
+    std::ifstream f(getListFilePath(active));
+    std::string line;
+    bool found = false;
+    while (std::getline(f, line))
+    {
+        size_t splitPos = line.find(':');
+        if (splitPos == std::string::npos) continue;
+        std::string k = line.substr(0, splitPos);
+        std::string v = line.substr(splitPos + 1);
+        if (k == key)
+        {
+            std::cout << key << " => " << v << "\n";
+            found = true;
+            break;
+        }
+    }
+    if (!found)
+        spdlog::warn("未查询到 key: {}", key);
+    f.close();
+}
+
+// 列出全部列表
+void showAllLists()
+{
+    std::cout << "===== 所有列表 =====\n";
+    for (auto& entry : fs::directory_iterator(LIST_FOLDER))
+    {
+        std::string filename = entry.path().filename().string();
+        size_t suffix = filename.find(".txt");
+        if (suffix != std::string::npos)
+            std::cout << filename.substr(0, suffix) << "\n";
+    }
+}
+
+// 合并列表（简易合并，去重逻辑自行扩展）
+void unionList(const std::string& src, const std::string& dst)
+{
+    if (!listExists(src) || !listExists(dst))
+    {
+        spdlog::error("源列表或目标列表不存在");
+        return;
+    }
+    std::ifstream srcFile(getListFilePath(src));
+    std::ofstream dstFile(getListFilePath(dst), std::ios::app);
+    std::string line;
+    while (std::getline(srcFile, line))
+    {
+        if (!line.empty()) dstFile << line << "\n";
+    }
+    srcFile.close();
+    dstFile.close();
+    spdlog::info("合并完成 {} -> {}", src, dst);
+}
+
+int main(int argc, char** argv)
+{
+    // 初始化终端色彩适配PowerShell
+    enableVTColor();
+    // 日志全局UTF8配置
+    spdlog::set_default_logger(spdlog::stdout_color_mt("console"));
+    spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
+
+    CLI11::App app("website_manager 网址管理工具 | 兼容 CMD / PowerShell");
+    app.require_subcommand(1);
+
+    // init 初始化
+    CLI11::App* initCmd = app.add_subcommand("init", "初始化数据目录");
+    initCmd->callback([](){ initWorkspace(); });
+
+    // create 创建列表
+    CLI11::App* createCmd = app.add_subcommand("create", "创建新列表");
+    std::string createName;
+    createCmd->add_arg("name", "列表名称")->required()->store(createName);
+    createCmd->callback([&](){ createList(createName); });
+
+    // delete 删除列表
+    CLI11::App* delCmd = app.add_subcommand("delete", "删除指定列表");
+    std::string delName;
+    delCmd->add_arg("name", "列表名称")->required()->store(delName);
+    delCmd->callback([&](){ deleteList(delName); });
+
+    // set 切换当前列表
+    CLI11::App* setCmd = app.add_subcommand("set", "切换激活列表");
+    std::string setName;
+    setCmd->add_arg("name", "列表名称")->required()->store(setName);
+    setCmd->callback([&](){
+        if (!listExists(setName))
+            spdlog::error("列表 {} 不存在", setName);
+        else
+        {
+            setActiveList(setName);
+            spdlog::info("当前列表切换为: {}", setName);
+        }
+    });
+
+    // show 查看当前列表
+    CLI11::App* showCmd = app.add_subcommand("show", "查看当前激活列表");
+    showCmd->callback([](){
+        std::string act = getActiveList();
+        if (act.empty()) std::cout << "无激活列表\n";
+        else std::cout << "当前列表: " << act << "\n";
+    });
+
+    // dir 列出全部列表
+    CLI11::App* dirCmd = app.add_subcommand("dir", "展示所有列表");
+    dirCmd->callback([](){ showAllLists(); });
+
+    // add 添加键值
+    CLI11::App* addCmd = app.add_subcommand("add", "添加网址/键值对");
+    std::string addKey, addVal;
+    addCmd->add_arg("key")->required()->store(addKey);
+    addCmd->add_arg("value")->required()->store(addVal);
+    addCmd->callback([&](){ addKV(addKey, addVal); });
+
+    // print 打印全部内容
+    CLI11::App* printCmd = app.add_subcommand("print", "打印当前列表全部数据");
+    printCmd->callback([](){ printList(); });
+
+    // find 精确查询key
+    CLI11::App* findCmd = app.add_subcommand("find", "根据key查询value");
+    std::string findK;
+    findCmd->add_arg("key")->required()->store(findK);
+    findCmd->callback([&](){ findKey(findK); });
+
+    // union 合并两个列表
+    CLI11::App* unionCmd = app.add_subcommand("union", "合并列表 union 源列表 目标列表");
+    std::string unSrc, unDst;
+    unionCmd->add_arg("src")->required()->store(unSrc);
+    unionCmd->add_arg("dst")->required()->store(unDst);
+    unionCmd->callback([&](){ unionList(unSrc, unDst); });
+
+    CLI11_PARSE(app, argc, argv);
     return 0;
 }
