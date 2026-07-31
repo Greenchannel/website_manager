@@ -1,3 +1,9 @@
+> ⚠️ **【重要安全警示】**
+> 本工具明文存储所有数据，无加密！禁止存放密码、证件、支付等敏感隐私信息。
+> 详细风险说明：[SECURITY_WARNING.md](./SECURITY_WARNING.md)
+>
+> [安全策略](./SECURITY.md) | [贡献行为准则](./CODE_OF_CONDUCT.md) | [贡献指南](./CONTRIBUTING.md) | [完整Wiki文档](https://github.com/Greenchannel/website_manager/wiki)
+
 # website_manager — 命令行键值对管理工具
 
 一个基于 **C++ / CLI11 / spdlog** 的命令行键值对管理工具。**仅支持 CMD 命令行操作**。
