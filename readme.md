@@ -1,3 +1,9 @@
+> ⚠️ **【重要安全警示】**
+> 本工具明文存储所有数据，无加密！禁止存放密码、证件、支付等敏感隐私信息。
+> 详细风险说明：[SECURITY_WARNING.md](./SECURITY_WARNING.md)
+>
+> [安全策略](./SECURITY.md) | [贡献行为准则](./CODE_OF_CONDUCT.md) | [贡献指南](./CONTRIBUTING.md) | [完整Wiki文档](https://github.com/Greenchannel/website_manager/wiki)
+
 # website_manager — 命令行键值对管理工具
 
 一个基于 **C++ / CLI11 / spdlog** 的命令行键值对管理工具。**仅支持 CMD 命令行操作**。
@@ -168,6 +174,4 @@ GitHub:https://github.com
 - 比如编译生成了main.exe
 - 你可以改成任何想要的名字 我个人喜欢的是webm.exe
 - 添加环境变量后 直接在cmd窗口里webm就可以使用力!
-
-## 快速导航
-[安全策略](./SECURITY.md) | [贡献行为准则](./CODE_OF_CONDUCT.md) | [贡献指南](./CONTRIBUTING.md) | [完整Wiki文档](https://github.com/Greenchannel/website_manager/wiki)
+  
