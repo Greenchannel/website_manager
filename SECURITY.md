@@ -1,3 +1,5 @@
+完整风险与使用限制请查看仓库独立安全警示文档：[SECURITY_WARNING.md](./SECURITY_WARNING.md)
+
 # 安全策略 Security Policy
 本项目：website_manager
 轻量本地网址管理工具，C++23 开发，Windows 终端运行，明文本地文本存储数据。
