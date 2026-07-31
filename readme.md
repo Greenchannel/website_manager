@@ -40,7 +40,7 @@ g++ -std=c++23 -I. webm.cpp -o webm.exe
 ---
 
 ## 子命令一览
-
+# cmd
 | 命令 | 参数 | 说明 |
 |------|------|------|
 | `create` | `<name>` — 列表名 | 创建新列表，已存在则拒绝 |
@@ -53,6 +53,13 @@ g++ -std=c++23 -I. webm.cpp -o webm.exe
 | `init` | 无 | 初始化环境 |
 | `union` | <nameA> <nameB> | 合并两个列表 |
 | `dir` | 无 | 展示所有列表 |
+
+# PowerShell
+| 命令 | 参数 | 说明 |
+|------|------|------|
+| `init` | 无 | 初始化环境 |
+| `create` | `<name>`-列表名(单个单词 / 中文均可,不能含空格)| 新建空白列表文件 list / 工作网址.txt功能：新建空白列表文件 list / 工作网址.txt |
+
 ---
 
 ## 典型用法
@@ -146,13 +153,6 @@ GitHub:https://github.com
 
 ---
 
-## AI成分
-- 几乎全部由这个人编写 但是spdlog这种体力活就交给cline处理了
-- readme除了"AI成分"和"作者的话"板块 剩下的全是ai生成的
-- Gemini和DeepSeek V4 Flash负责给我答疑
-- DeepSeek V4 Pro 负责审查我的代码
-- 最后用cline排了一个try-catch的bug
-
 ## 作者的话
 - 我用了spdlog和CLI11这两个库
 - 想使用这个程序特别简单
@@ -160,4 +160,3 @@ GitHub:https://github.com
 - 比如编译生成了main.exe
 - 你可以改成任何想要的名字 我个人喜欢的是webm.exe
 - 添加环境变量后 直接在cmd窗口里webm就可以使用力!
-- 作者不会英语，项目中的英文来自 Google 翻译
