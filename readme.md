@@ -157,5 +157,5 @@ GitHub:https://github.com
 - 添加环境变量后 直接在cmd窗口里webm就可以使用力!
 - 作者不会英语，项目中的英文来自 Google 翻译
 
-## website_manager WiKi
-[在线Wiki完整文档](https://github.com/Greenchannel/website_manager/wiki)
+## 快速导航
+[安全策略](./SECURITY.md) | [贡献行为准则](./CODE_OF_CONDUCT.md) | [贡献指南](./CONTRIBUTING.md) | [完整Wiki文档](https://github.com/Greenchannel/website_manager/wiki)
