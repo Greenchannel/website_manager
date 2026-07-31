@@ -169,5 +169,5 @@ GitHub:https://github.com
 - 你可以改成任何想要的名字 我个人喜欢的是webm.exe
 - 添加环境变量后 直接在cmd窗口里webm就可以使用力!
 
-## website_manager WiKi
-[在线Wiki完整文档](https://github.com/Greenchannel/website_manager/wiki)
+## 快速导航
+[安全策略](./SECURITY.md) | [贡献行为准则](./CODE_OF_CONDUCT.md) | [贡献指南](./CONTRIBUTING.md) | [完整Wiki文档](https://github.com/Greenchannel/website_manager/wiki)
