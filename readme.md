@@ -168,3 +168,6 @@ GitHub:https://github.com
 - 比如编译生成了main.exe
 - 你可以改成任何想要的名字 我个人喜欢的是webm.exe
 - 添加环境变量后 直接在cmd窗口里webm就可以使用力!
+
+## website_manager WiKi
+[在线Wiki完整文档](https://github.com/Greenchannel/website_manager/wiki)
