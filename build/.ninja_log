@@ -1,0 +1,6 @@
+# ninja log v7
+47	26195	8071132983630606	CMakeFiles/webm.dir/webm.cpp.obj	1224f3185fa479aa
+26208	27175	8071133245175356	bin/webm.exe	c0bd0d8b32c5848c
+64	879	8074653044529749	CMakeFiles/webm.dir/monocypher/src/monocypher.c.obj	ad578d6928cf5c21
+54	18790	8074653044326005	CMakeFiles/webm.dir/webm.cpp.obj	b768c3ebd29080
+18790	19510	8074653231806120	bin/webm.exe	a140129e6dd8d501
