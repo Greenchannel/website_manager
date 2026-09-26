@@ -42,8 +42,8 @@
 #   include <sys/wait.h>
 #endif
 namespace fs=std::filesystem;
-const std::string configFilePath="configs/listConfig.txt";
-const std::string gitServerPath="configs/gitServer.txt";
+const std::string configFilePath="configs/listConfig";
+const std::string gitServerPath="configs/gitServer";
 const std::string gitignorePath=".gitignore";
 //以后杂七杂八的功能可能会用的 所以就先搞函数提升下开发效率
 bool checkFile(const std::string& fileName){//判断文件是否存在
@@ -363,10 +363,6 @@ int main(int argc,char *argv[]){
             spdlog::error("无法创建配置文件");
             return;
         }
-        if (!createFile(gitignorePath)){//如果创建失败
-            spdlog::error("无法创建gitignore");
-            return;
-        }
         std::ofstream file(gitignorePath);
         if (!file.is_open()){
             int errnoCode=errno;
@@ -439,13 +435,18 @@ int main(int argc,char *argv[]){
     });
     auto* save=app.add_subcommand("save","上传本地内容到git服务器");
     save->callback([&](){
-        int returnValue=systemExitCode(std::system(("git commit -m\""+getTime()+"\"").c_str()));
+        int returnValue=systemExitCode(std::system("git add ."));
         if (returnValue!=0){
-            spdlog::error("在提交git commit时出现错误 git返回值:"+std::to_string(returnValue));
+            spdlog::error("在git add时出现错误 git返回值:"+std::to_string(returnValue));
         }else{
-            returnValue=systemExitCode(std::system("git push -u origin HEAD"));
+            returnValue=systemExitCode(std::system(("git commit -m\""+getTime()+"\"").c_str()));
             if (returnValue!=0){
-                spdlog::error("在上传数据到git服务器时出现错误 git返回值:"+std::to_string(returnValue));
+                spdlog::error("在提交git commit时出现错误 git返回值:"+std::to_string(returnValue));
+            }else{
+                returnValue=systemExitCode(std::system("git push -u origin HEAD"));
+                if (returnValue!=0){
+                    spdlog::error("在上传数据到git服务器时出现错误 git返回值:"+std::to_string(returnValue));
+                }
             }
         }
         return;
