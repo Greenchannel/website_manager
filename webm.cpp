@@ -30,13 +30,21 @@
 #include <filesystem>
 #include <queue>
 #include <direct.h>
-#include <windows.h>
+#include <cstdlib>
 #include <cstdio>
+#include <ctime>
 #include <utility>
 #include "CLI11.hpp"
 #include "spdlog/spdlog.h"
+#ifdef _WIN32
+#   include <windows.h>
+#else
+#   include <sys/wait.h>
+#endif
 namespace fs=std::filesystem;
-const std::string configFilePath="listConfig.txt";
+const std::string configFilePath="configs/listConfig.txt";
+const std::string gitServerPath="configs/gitServer.txt";
+const std::string gitignorePath=".gitignore";
 //以后杂七杂八的功能可能会用的 所以就先搞函数提升下开发效率
 bool checkFile(const std::string& fileName){//判断文件是否存在
     std::ifstream file(fileName+".txt");
@@ -87,6 +95,28 @@ int editDistance(const std::string & a,const std::string & b){
     }
     return dp[a.size()][b.size()];
 }
+int systemExitCode(int raw){
+#ifdef _WIN32
+    return raw;    
+#else
+    if (raw==-1||!WIFEXITED(raw)){
+        return -1;
+    }
+    return WEXITSTATUS(raw);
+#endif
+}
+std::string getTime(){
+    const std::time_t t=std::time(nullptr);
+    std::tm tm{};
+#ifdef _WIN32
+    localtime_s(&tm,&t);
+#else
+    localtime_r(&t,&tm);
+#endif
+    char buf[32];
+    std::strftime(buf,sizeof(buf),"%Y-%m-%d %H:%M:%S",&tm);
+    return buf;
+}
 int main(int argc,char *argv[]){
     SetConsoleOutputCP(CP_UTF8);      
     SetConsoleCP(CP_UTF8);
@@ -111,6 +141,12 @@ int main(int argc,char *argv[]){
             }
         }
     }//Google翻译立大功
+    std::error_code ec;
+    fs::create_directories(fs::path(configFilePath).parent_path(),ec);
+    if (ec){
+        spdlog::error("无法创建配置目录:{}",ec.message());
+        return -1;
+    }
     CLI::App app{"一个简单的键值对存储器"};
     std::string createListName;
     auto* create=app.add_subcommand("create","创建一个list");
@@ -269,13 +305,13 @@ int main(int argc,char *argv[]){
             findpair.second.second=listLine.substr(index+1);
             findpair.first=editDistance(findpair.second.first,findKey);
             findQueue.push(findpair);
-            for(int i=1;i<=8;i++){
-                if (findQueue.empty()){
-                    break;
-                }
-                std::cout<<i<<"."<<findQueue.top().second.first<<":"<<(findQueue.top().second.second)<<"\n";
-                findQueue.pop();
+        }
+        for(int i=1;i<=8;i++){
+            if (findQueue.empty()){
+                break;
             }
+            std::cout<<i<<"."<<findQueue.top().second.first<<":"<<(findQueue.top().second.second)<<"\n";
+            findQueue.pop();
         }
     });
     auto* del=app.add_subcommand("delete","删除list");
@@ -323,11 +359,23 @@ int main(int argc,char *argv[]){
     });
     auto* init=app.add_subcommand("init","初始化程序");
     init->callback([&](){
-        if (!createFile("listConfig")){//如果创建失败
+        if (!createFile(configFilePath)){//如果创建失败
             spdlog::error("无法创建配置文件");
             return;
         }
-        spdlog::info("成功创建配置文件");
+        if (!createFile(gitignorePath)){//如果创建失败
+            spdlog::error("无法创建gitignore");
+            return;
+        }
+        std::ofstream file(gitignorePath);
+        if (!file.is_open()){
+            int errnoCode=errno;
+            spdlog::error("无法打开gitignore");
+            spdlog::error("errnoCode: {}", errnoCode);
+            return;
+        }
+        file<<"/configs/";
+        system("git init");
     });
     std::string unionListA;
     std::string unionListB;
@@ -363,17 +411,53 @@ int main(int argc,char *argv[]){
     dir->callback([&](){
         int counter=0;
         fs::path currentPath=fs::current_path();
-        for (const auto& entry : fs::recursive_directory_iterator(currentPath)){
+        for (const auto& entry : fs::directory_iterator(currentPath)){
             if (fs::is_regular_file(entry.status())){
                 counter++;
-                if (entry.path().string()==configFilePath){
-                    continue;
-                }
                 std::cout<<counter<<"."<<entry.path().string()<<"\n";
             }
         }
     });
-    
+    std::string bindServerIp=""; 
+    auto* bind=app.add_subcommand("bind","设置git服务器");
+    bind->add_option("ip",bindServerIp,"git服务器的IP地址")->required();
+    bind->callback([&](){
+        int returnValue=systemExitCode(std::system(("git remote set-url origin "+bindServerIp).c_str()));
+        if (returnValue==0){
+            spdlog::info("成功设置git服务器");
+        }else if(returnValue==2){
+            returnValue=systemExitCode(std::system(("git remote add origin "+bindServerIp).c_str()));
+            if (returnValue==0){
+                spdlog::info("成功设置git服务器");
+            }else{
+                spdlog::error("在设置过程中出现问题 git返回值:"+std::to_string(returnValue));
+            }
+        }else{
+            spdlog::error("在设置过程中出现问题 git返回值:"+std::to_string(returnValue));
+        }
+        return;
+    });
+    auto* save=app.add_subcommand("save","上传本地内容到git服务器");
+    save->callback([&](){
+        int returnValue=systemExitCode(std::system(("git commit -m\""+getTime()+"\"").c_str()));
+        if (returnValue!=0){
+            spdlog::error("在提交git commit时出现错误 git返回值:"+std::to_string(returnValue));
+        }else{
+            returnValue=systemExitCode(std::system("git push -u origin HEAD"));
+            if (returnValue!=0){
+                spdlog::error("在上传数据到git服务器时出现错误 git返回值:"+std::to_string(returnValue));
+            }
+        }
+        return;
+    });
+    auto* get=app.add_subcommand("get","从git服务器拉取数据");
+    get->callback([&](){
+        int returnValue=systemExitCode(std::system("git pull --ff-only origin HEAD"));
+        if (returnValue!=0){
+            spdlog::error("在从git服务器拉取数据时出现错误 git返回值:"+std::to_string(returnValue));
+        }
+        return;
+    });
     try {
         app.parse(argc,argv);
     } catch (const CLI::ParseError &e) {
