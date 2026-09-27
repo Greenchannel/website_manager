@@ -378,7 +378,7 @@ int main(int argc,char *argv[]){
         std::string line;
         getline(file,line);
         line=fixGetline(line);
-        if (line.empty()){
+        if (line.empty()||!checkFile(line)){
             spdlog::error("当前未设置list");
             return;
         }
