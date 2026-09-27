@@ -471,7 +471,7 @@ int main(int argc,char *argv[]){
             spdlog::error("在git add时出现错误 git返回值:"+std::to_string(returnValue));
         }else{
             returnValue=systemExitCode(std::system(("git commit -m\""+getTime()+"\"").c_str()));
-            if (returnValue!=0){
+            if (returnValue!=0&&returnValue!=1){
                 spdlog::error("在提交git commit时出现错误 git返回值:"+std::to_string(returnValue));
             }else{
                 returnValue=systemExitCode(std::system("git push -u origin HEAD"));
