@@ -29,7 +29,7 @@
 #include <cerrno>
 #include <filesystem>
 #include <queue>
-#include <direct.h>
+#include <vector>
 #include <cstdlib>
 #include <cstdio>
 #include <ctime>
@@ -37,8 +37,12 @@
 #include "CLI11.hpp"
 #include "spdlog/spdlog.h"
 #ifdef _WIN32
+#   define NOMINMAX
 #   include <windows.h>
+#   include <direct.h>
 #else
+#   include <unistd.h>
+#   include <sys/stat.h>
 #   include <sys/wait.h>
 #endif
 namespace fs=std::filesystem;
@@ -70,7 +74,13 @@ std::string getListName(){
     //如果打开了
     std::string listName;
     getline(file,listName);
-    return listName;
+    return fixGetline(listName);
+}
+std::string fixGetline(std::string line){
+    while ((!line.empty())&&(line.back()=='\r'||line.back()==' '||line.back()=='\t')){
+        line.pop_back();
+    }
+    return line;
 }
 int editDistance(const std::string & a,const std::string & b){
     std::vector<std::vector<int>> dp;
@@ -118,22 +128,35 @@ std::string getTime(){
     return buf;
 }
 int main(int argc,char *argv[]){
+#ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);      
     SetConsoleCP(CP_UTF8);
+#endif
     //argc个元素 argv[i]代表参数
+#ifdef _WIN32
     if (_chdir("list")==-1){//当list不存在或者无法移动到list
+#else
+    if (chdir("list")==-1){
+#endif
         int errnoCode=errno;
         spdlog::error("在切换目录到list时出现错误");
         spdlog::error("errnoCode: {}", errnoCode);
+#ifdef _WIN32
         if (_mkdir("list")==-1){//如果创建list失败
+#else
+        if (mkdir("list",0755)==-1){
+#endif
             errnoCode=errno;
             spdlog::error("无法创建list目录");
             spdlog::error("errnoCode: {}", errnoCode);
             return -1;
         }else{
             spdlog::info("成功创建目录");
-            //_chdir("list");
+#ifdef _WIN32            
             if (_chdir("list")==-1){//创建目录后却仍然无法进入
+#else
+            if (chdir("list")==-1){
+#endif
                 errnoCode=errno;
                 spdlog::error("成功创建list目录,但无法进入");
                 spdlog::error("errnoCode: {}", errnoCode);
@@ -238,6 +261,7 @@ int main(int argc,char *argv[]){
             std::string line;
             int counter=0;
             while (getline(file,line)){
+                line=fixGetline(line);
                 if (line.empty()){
                     continue;
                 }
@@ -260,6 +284,7 @@ int main(int argc,char *argv[]){
             std::string listLine;
             int counter=0;
             while (getline(file,listLine)){
+                listLine=fixGetline(listLine);
                 if (listLine.empty()){
                     continue;
                 }
@@ -288,6 +313,7 @@ int main(int argc,char *argv[]){
         //0~listLine-1
         std::priority_queue<std::pair<int,std::pair<std::string,std::string>>,std::vector<std::pair<int, std::pair<std::string, std::string>>>,std::greater<>> findQueue;
         while (getline(file,listLine)){
+            listLine=fixGetline(listLine);
             //读取到的listLine应该形如xxx=xxx
             if (listLine.empty()){
                 continue;//如果这行空 直接跳过
@@ -351,6 +377,7 @@ int main(int argc,char *argv[]){
         }
         std::string line;
         getline(file,line);
+        line=fixGetline(line);
         if (line.empty()){
             spdlog::error("当前未设置list");
             return;
@@ -359,10 +386,14 @@ int main(int argc,char *argv[]){
     });
     auto* init=app.add_subcommand("init","初始化程序");
     init->callback([&](){
-        if (!createFile(configFilePath)){//如果创建失败
+        std::ofstream configFile(configFilePath);
+        if (!configFile.is_open()){
+            int errnoCode=errno;
             spdlog::error("无法创建配置文件");
+            spdlog::error("errnoCode: {}", errnoCode);
             return;
         }
+        configFile.close();
         std::ofstream file(gitignorePath);
         if (!file.is_open()){
             int errnoCode=errno;
