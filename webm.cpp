@@ -50,6 +50,12 @@ const std::string configFilePath="configs/listConfig";
 const std::string gitServerPath="configs/gitServer";
 const std::string gitignorePath=".gitignore";
 //以后杂七杂八的功能可能会用的 所以就先搞函数提升下开发效率
+std::string fixGetline(std::string line){
+    while ((!line.empty())&&(line.back()=='\r'||line.back()==' '||line.back()=='\t')){
+        line.pop_back();
+    }
+    return line;
+}
 bool checkFile(const std::string& fileName){//判断文件是否存在
     std::ifstream file(fileName+".txt");
         if (file.is_open()){//如果被打开说明文件存在
@@ -75,12 +81,6 @@ std::string getListName(){
     std::string listName;
     getline(file,listName);
     return fixGetline(listName);
-}
-std::string fixGetline(std::string line){
-    while ((!line.empty())&&(line.back()=='\r'||line.back()==' '||line.back()=='\t')){
-        line.pop_back();
-    }
-    return line;
 }
 int editDistance(const std::string & a,const std::string & b){
     std::vector<std::vector<int>> dp;
