@@ -484,9 +484,15 @@ int main(int argc,char *argv[]){
     });
     auto* get=app.add_subcommand("get","从git服务器拉取数据");
     get->callback([&](){
-        int returnValue=systemExitCode(std::system("git pull --ff-only origin HEAD"));
+        int returnValue=systemExitCode(std::system("git fetch -f origin HEAD"));
         if (returnValue!=0){
             spdlog::error("在从git服务器拉取数据时出现错误 git返回值:"+std::to_string(returnValue));
+            return;
+        }
+        returnValue=systemExitCode(std::system("git reset --hard FETCH_HEAD"));
+        if (returnValue!=0){
+            spdlog::error("在更改本地git时出现错误 git返回值:"+std::to_string(returnValue));
+            return;    
         }
         return;
     });
