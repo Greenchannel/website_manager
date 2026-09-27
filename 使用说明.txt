@@ -1,38 +1,62 @@
-website_manager (webm) — Windows x64
-====================================
-构建方式：GitHub Actions 交叉编译（MinGW-w64 GCC 12，静态链接单文件，无需任何 DLL）
-环境要求：Windows 10/11 x64。只用本地列表功能不需要额外安装任何东西；
-          要用 save / get 与服务器同步，需要先装 Git for Windows（保证 git 在 PATH 里）。
+website_manager (webm) — 使用说明
+=================================
+一个命令行键值对（key:value）小工具。Windows 用户看「一」，Linux 用户看「二」。
+数据以明文存储，不要放密码、证件、支付等敏感信息。
 
-【安装】
-1) 解压到一个有写权限的目录，例如 D:\tools\webm\
-2) 想全局调用就把该目录加进 PATH：
-   此电脑 右键 → 属性 → 高级系统设置 → 环境变量 → 用户变量 Path → 新建 → D:\tools\webm
-   重开一个 cmd 窗口生效
-3) 首次使用：
-   webm create work
-   webm set work
-   webm add bilibili https://bilibili.com
-   webm print
+一、Windows (x64)
+  包内文件：webm.exe（单文件，不需要任何运行库）
+  1) 解压到有写权限的目录，例如 D:\tools\webm\
+  2) 想全局调用就把该目录加入 PATH：
+     此电脑 右键 → 属性 → 高级系统设置 → 环境变量 → 用户变量 Path → 新建 → D:\tools\webm
+     之后重开一个 cmd 窗口生效
+  3) 首次使用：
+     webm create work
+     webm set work
+     webm add bilibili https://bilibili.com
+     webm print
+  4) 要用 save / get 同步，需要先装 Git for Windows（保证 git 在 PATH 里）
+  5) 已知问题：中文键名可能显示成乱码（cmd 传来的中文参数按系统 ANSI 编码进入程序，
+     而程序把控制台设成了 UTF-8），建议暂时用英文键名
 
-【数据在哪】
-程序每次启动都会切到「当前目录下的 list\」子目录，所以：
-  list\*.txt            你的所有列表数据（key:value 每行一条）
-  list\configs\listConfig   当前选中的列表名
-换一个目录运行 = 换一套数据。整个 list\ 拷走就是完整备份。
+二、Linux (x86_64)
+  包内文件：webm（静态链接，不依赖 libstdc++ / glibc 版本，任意发行版直接跑）
+  1) 解压安装：
+     mkdir -p ~/.local/bin
+     tar -xzf webm-linux-x64.tar.gz -C ~/.local/bin
+     chmod +x ~/.local/bin/webm
+  2) 确保 ~/.local/bin 在 PATH 里（多数发行版默认已包含）。没有的话在 ~/.bashrc 加：
+     export PATH="$HOME/.local/bin:$PATH"
+  3) 首次使用：
+     webm create work
+     webm set work
+     webm add bilibili https://bilibili.com
+     webm print
+  4) 要用 save / get 同步，需要系统装了 git
 
-【多机同步（可选）】
-   webm init                  初始化（在 list\ 里 git init）
-   webm bind <仓库地址>        设置远端
-   webm save                  上传
-   webm get                   拉取
-   ※ 第二台机器必须 clone 成 list 目录，即：git clone <仓库地址> list
-     直接 git clone 的话文件会落在根目录，程序找不到数据。
+三、数据存在哪（两个平台一样）
+  程序每次启动都会切到「当前目录下的 list/」：
+    list/*.txt              你的全部数据，每行一条 key:value
+    list/configs/listConfig 当前选中的列表名
+  换一个目录运行 = 换一套数据；把整个 list/ 拷走就是完整备份。
 
-【注意】
-- 数据是明文存储的，不要放密码、证件、支付信息。
-- 已知问题：Windows cmd 传来的中文参数会按系统 ANSI 编码（中文系统为 GBK）进入程序，
-  而程序把控制台设成了 UTF-8，因此中文键名可能显示成乱码。建议暂时用英文键名。
-- 卸载：删掉解压出来的目录即可，程序不写注册表。
+四、命令一览
+  create <名>        新建列表
+  set <名>           切换当前列表
+  add <键> <值>      向当前列表追加一条（键不能含 ':'）
+  print [名]         编号输出列表内容
+  find <键>          按编辑距离模糊查询（最多显示 8 条）
+  delete <名>        删除列表
+  show               查看当前列表名
+  dir                列出所有列表文件
+  union <A> <B>      把列表 A 追加合并到列表 B
+  init               初始化（会在此目录 git init）
+  bind <仓库地址>     设置 git 远端
+  save / get         上传 / 拉取
 
-【卸载】直接删除目录，不写注册表、不留残留。
+五、多机同步
+  webm init → webm bind <仓库地址> → webm save（上传）/ webm get（拉取）
+  ※ 第二台机器必须 clone 成 list 目录：git clone <仓库地址> list
+    直接 git clone 的话文件会落在根目录，程序找不到数据。
+
+六、卸载
+  删掉程序文件（以及你创建的 list/ 数据目录）即可，不写注册表、不留残留。

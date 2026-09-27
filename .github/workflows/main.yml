@@ -1,6 +1,6 @@
-name: build-windows
+name: build
 
-# 打 tag（v1.0.0 这种）→ 自动编译并挂到 Release；平时 push → 只上传 artifact
+# 打 tag（v1.0.0 这种）→ 编译两个平台并挂到 Release；平时 push → 只上传 artifact
 on:
   push:
     branches: [main, master]
@@ -44,8 +44,46 @@ jobs:
           name: webm-windows-x64
           path: webm-windows-x64.zip
 
-      - name: 打 tag 时自动发布 Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
+  linux-x64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 编译（静态链接，不依赖 libstdc++ / glibc 版本）
+        run: |
+          mkdir -p dist
+          g++ -std=c++23 -O2 -I. -static -s -o dist/webm webm.cpp
+          ldd dist/webm 2>&1 || true
+
+      - name: 确认是静态链接（否则老发行版会缺 GLIBCXX）
+        run: |
+          file dist/webm
+          ldd dist/webm 2>&1 | grep -q "not a dynamic executable"
+
+      - name: 打包
+        run: |
+          cp 使用说明.txt dist/ 2>/dev/null || true
+          tar -czf webm-linux-x64.tar.gz -C dist .
+
+      - uses: actions/upload-artifact@v4
         with:
-          files: webm-windows-x64.zip
+          name: webm-linux-x64
+          path: webm-linux-x64.tar.gz
+
+  # 两个平台都编完后再统一发版，避免两个 job 抢着创建 Release
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [windows-x64, linux-x64]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: 生成校验和
+        run: cd artifacts && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
