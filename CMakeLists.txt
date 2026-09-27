@@ -1,40 +1,30 @@
 cmake_minimum_required(VERSION 3.14)
 
-# 项目名称
 project(webm
     VERSION 1.0.0
     DESCRIPTION "A simple website manager"
-    LANGUAGES CXX C
+    LANGUAGES CXX
 )
 
-# 设置 C++ 标准
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# 设置输出目录（统一放到 build 下的 bin 目录）
+# 统一输出到 build/bin
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
-# 添加 monocypher 源文件 + webm.cpp
-add_executable(webm
-    webm.cpp
-    monocypher/src/monocypher.c
-)
+# CLI11.hpp 与 spdlog/ 都是仓库根目录下的单头文件依赖，直接 -I 根目录即可
+add_executable(webm webm.cpp)
 
-# 包含头文件目录（CLI11.hpp、spdlog/、monocypher/）
 target_include_directories(webm PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/monocypher/src
 )
 
-# 链接 Windows 系统库（用于随机数生成等）
-if(WIN32)
-    target_link_libraries(webm PRIVATE
-        advapi32
-    )
-endif()
+# Windows（MinGW）下静态链接，产出不依赖 libstdc++-6.dll / libwinpthread-1.dll 的单文件 exe
+target_link_options(webm PRIVATE
+    $<$<AND:$<BOOL:${WIN32}>,$<CXX_COMPILER_ID:GNU>>:-static;-static-libgcc;-static-libstdc++>
+)
 
-# 编译选项
 target_compile_options(webm PRIVATE
     $<$<CXX_COMPILER_ID:MSVC>:/W4 /utf-8>
     $<$<CXX_COMPILER_ID:GNU>:-Wall -Wextra -Wpedantic>

@@ -1,0 +1,38 @@
+website_manager (webm) — Windows x64
+====================================
+构建方式：GitHub Actions 交叉编译（MinGW-w64 GCC 12，静态链接单文件，无需任何 DLL）
+环境要求：Windows 10/11 x64。只用本地列表功能不需要额外安装任何东西；
+          要用 save / get 与服务器同步，需要先装 Git for Windows（保证 git 在 PATH 里）。
+
+【安装】
+1) 解压到一个有写权限的目录，例如 D:\tools\webm\
+2) 想全局调用就把该目录加进 PATH：
+   此电脑 右键 → 属性 → 高级系统设置 → 环境变量 → 用户变量 Path → 新建 → D:\tools\webm
+   重开一个 cmd 窗口生效
+3) 首次使用：
+   webm create work
+   webm set work
+   webm add bilibili https://bilibili.com
+   webm print
+
+【数据在哪】
+程序每次启动都会切到「当前目录下的 list\」子目录，所以：
+  list\*.txt            你的所有列表数据（key:value 每行一条）
+  list\configs\listConfig   当前选中的列表名
+换一个目录运行 = 换一套数据。整个 list\ 拷走就是完整备份。
+
+【多机同步（可选）】
+   webm init                  初始化（在 list\ 里 git init）
+   webm bind <仓库地址>        设置远端
+   webm save                  上传
+   webm get                   拉取
+   ※ 第二台机器必须 clone 成 list 目录，即：git clone <仓库地址> list
+     直接 git clone 的话文件会落在根目录，程序找不到数据。
+
+【注意】
+- 数据是明文存储的，不要放密码、证件、支付信息。
+- 已知问题：Windows cmd 传来的中文参数会按系统 ANSI 编码（中文系统为 GBK）进入程序，
+  而程序把控制台设成了 UTF-8，因此中文键名可能显示成乱码。建议暂时用英文键名。
+- 卸载：删掉解压出来的目录即可，程序不写注册表。
+
+【卸载】直接删除目录，不写注册表、不留残留。
