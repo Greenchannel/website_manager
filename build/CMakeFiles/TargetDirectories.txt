@@ -1,3 +1,0 @@
-D:/coding/c++/website_manager/build/CMakeFiles/webm.dir
-D:/coding/c++/website_manager/build/CMakeFiles/edit_cache.dir
-D:/coding/c++/website_manager/build/CMakeFiles/rebuild_cache.dir
