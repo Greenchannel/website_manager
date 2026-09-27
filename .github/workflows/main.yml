@@ -1,6 +1,6 @@
 name: build
 
-# 打 tag（v1.0.0 这种）→ 编译两个平台并挂到 Release；平时 push → 只上传 artifact
+# 打 tag（v1.0.0 这种）→ 编译三个平台并挂到 Release；平时 push → 只上传 artifact
 on:
   push:
     branches: [main, master]
@@ -70,10 +70,35 @@ jobs:
           name: webm-linux-x64
           path: webm-linux-x64.tar.gz
 
-  # 两个平台都编完后再统一发版，避免两个 job 抢着创建 Release
+  linux-arm64:
+    # 原生 arm64 runner（公开仓库免费，无需交叉工具链）
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 编译（静态链接，不依赖 libstdc++ / glibc 版本）
+        run: |
+          mkdir -p dist
+          g++ -std=c++23 -O2 -I. -static -s -o dist/webm webm.cpp
+          file dist/webm
+
+      - name: 确认是静态链接
+        run: ldd dist/webm 2>&1 | grep -q "not a dynamic executable"
+
+      - name: 打包
+        run: |
+          cp 使用说明.txt dist/ 2>/dev/null || true
+          tar -czf webm-linux-arm64.tar.gz -C dist .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: webm-linux-arm64
+          path: webm-linux-arm64.tar.gz
+
+  # 全部平台都编完后再统一发版，避免多个 job 抢着创建 Release
   release:
     if: startsWith(github.ref, 'refs/tags/')
-    needs: [windows-x64, linux-x64]
+    needs: [windows-x64, linux-x64, linux-arm64]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
